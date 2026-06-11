@@ -8,6 +8,7 @@ export const metadata: Metadata = {
   title: "Polla Mundialista · Familia Rivera Arcos",
   description: "Pronostica el Mundial 2026 con la Familia Rivera Arcos. Suma puntos, sube en el ranking y vive el torneo juntos.",
   themeColor: "#0f172a",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
