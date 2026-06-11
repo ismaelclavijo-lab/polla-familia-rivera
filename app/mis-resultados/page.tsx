@@ -4,6 +4,7 @@ import { getPronosticos, getResultados } from "@/lib/db";
 import { PARTIDOS } from "@/lib/partidos-data";
 import { calcularPuntos } from "@/lib/scoring";
 import Navbar from "@/components/Navbar";
+import AutoRefresh from "@/components/AutoRefresh";
 
 export const dynamic = "force-dynamic";
 
@@ -58,6 +59,7 @@ export default async function MisResultadosPage() {
     <div className="min-h-screen bg-[#0f172a] text-white">
       <Navbar nombre={session.nombre} />
 
+      <AutoRefresh intervalMs={60_000} />
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-1">Mis resultados</h1>
         <p className="text-slate-400 text-sm mb-6">
