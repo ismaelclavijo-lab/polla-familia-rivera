@@ -43,7 +43,11 @@ export default async function MisResultadosPage() {
           )
         : { points: null as number | null, label: null as string | null };
 
-      return { partido, pronostico: p, resultado, tieneResultado, points, label };
+      // En vivo: started within last 115 min and not yet cerrado
+      const finEstimado = new Date(new Date(partido.fechaUTC).getTime() + 115 * 60 * 1000);
+      const enVivo = ahora >= fechaPartido && ahora <= finEstimado && !resultado?.cerrado;
+
+      return { partido, pronostico: p, resultado, tieneResultado, points, label, enVivo };
     })
     .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort(
@@ -52,6 +56,7 @@ export default async function MisResultadosPage() {
         new Date(b.partido.fechaUTC).getTime()
     );
 
+  const hayEnVivo = cerrados.some((c) => c.enVivo);
   const yaJugados = cerrados.filter((c) => c.tieneResultado);
   const totalPuntos = yaJugados.reduce((sum, c) => sum + (c.points ?? 0), 0);
 
@@ -59,7 +64,7 @@ export default async function MisResultadosPage() {
     <div className="min-h-screen bg-[#0f172a] text-white">
       <Navbar nombre={session.nombre} />
 
-      <AutoRefresh intervalMs={60_000} />
+      <AutoRefresh intervalMs={hayEnVivo ? 30_000 : 60_000} />
       <main className="max-w-3xl mx-auto px-4 py-8">
         <h1 className="text-2xl font-bold mb-1">Mis resultados</h1>
         <p className="text-slate-400 text-sm mb-6">
@@ -91,7 +96,7 @@ export default async function MisResultadosPage() {
         )}
 
         <div className="space-y-3">
-          {cerrados.map(({ partido, pronostico, resultado, tieneResultado, points, label }) => {
+          {cerrados.map(({ partido, pronostico, resultado, tieneResultado, points, label, enVivo }) => {
             const fecha = new Date(partido.fechaUTC);
             const fechaStr = fecha.toLocaleDateString("es", {
               weekday: "short",
@@ -136,16 +141,22 @@ export default async function MisResultadosPage() {
                       {fechaStr} · {horaStr}
                     </p>
                   </div>
-                  {tieneResultado && points !== null ? (
-                    <span className={`text-sm font-bold ${ptsColor}`}>
-                      {points > 0 ? "+" : ""}
-                      {points} pts{label ? ` · ${label}` : ""}
-                    </span>
-                  ) : (
-                    <span className="text-xs text-slate-500 italic">
-                      Esperando resultado…
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {enVivo && (
+                      <span className="flex items-center gap-1 text-xs font-bold text-red-400 animate-pulse">
+                        🔴 EN VIVO
+                      </span>
+                    )}
+                    {tieneResultado && points !== null ? (
+                      <span className={`text-sm font-bold ${ptsColor}`}>
+                        {points > 0 ? "+" : ""}{points} pts{label ? ` · ${label}` : ""}
+                      </span>
+                    ) : (
+                      <span className="text-xs text-slate-500 italic">
+                        Esperando resultado…
+                      </span>
+                    )}
+                  </div>
                 </div>
 
                 {/* Teams + scores */}
