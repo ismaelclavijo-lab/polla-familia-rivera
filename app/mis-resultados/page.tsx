@@ -68,37 +68,40 @@ export default async function MisResultadosPage() {
   const totalPuntos = conPronostico.reduce((sum, c) => sum + (c.points ?? 0), 0);
 
   return (
-    <div className="min-h-screen bg-[#0f172a] text-white">
+    <div className="min-h-screen bg-slate-950 text-white">
       <Navbar nombre={session.nombre} />
-
       <AutoRefresh intervalMs={hayEnVivo ? 30_000 : 60_000} />
+
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-2xl font-bold mb-1">Mis resultados</h1>
-        <p className="text-slate-400 text-sm mb-6">
-          Tus pronósticos cerrados y cómo quedaron frente al marcador real.
-        </p>
+
+        {/* Header */}
+        <div className="mb-8">
+          <p className="text-xs text-slate-600 uppercase tracking-widest font-medium mb-1">Mundial 2026</p>
+          <h1 className="text-3xl font-bold text-white mb-1">Mis resultados</h1>
+          <p className="text-slate-500 text-sm">Tus pronósticos cerrados vs. el marcador real.</p>
+        </div>
 
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
-          <div className="bg-[#1e293b] rounded-xl p-4 text-center border border-slate-700/50">
-            <div className="text-2xl font-bold text-orange-400">{conPronostico.length}</div>
-            <div className="text-xs text-slate-400 mt-1">Picks cerrados</div>
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 text-center">
+            <div className="text-3xl font-bold text-orange-400 mb-0.5">{conPronostico.length}</div>
+            <div className="text-xs text-slate-600 uppercase tracking-wider">Picks cerrados</div>
           </div>
-          <div className="bg-[#1e293b] rounded-xl p-4 text-center border border-slate-700/50">
-            <div className="text-2xl font-bold text-white">{yaJugados.length}</div>
-            <div className="text-xs text-slate-400 mt-1">Ya jugados</div>
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 text-center">
+            <div className="text-3xl font-bold text-slate-200 mb-0.5">{yaJugados.length}</div>
+            <div className="text-xs text-slate-600 uppercase tracking-wider">Ya jugados</div>
           </div>
-          <div className="bg-[#1e293b] rounded-xl p-4 text-center border border-slate-700/50">
-            <div className="text-2xl font-bold text-green-400">{totalPuntos}</div>
-            <div className="text-xs text-slate-400 mt-1">Puntos sumados</div>
+          <div className="bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 text-center">
+            <div className="text-3xl font-bold text-emerald-400 mb-0.5">{totalPuntos}</div>
+            <div className="text-xs text-slate-600 uppercase tracking-wider">Puntos</div>
           </div>
         </div>
 
         {cerrados.length === 0 && (
-          <div className="text-center py-16 text-slate-500">
-            <span className="text-4xl block mb-3">⏳</span>
-            <p>Aún no hay partidos cerrados.</p>
-            <p className="text-sm mt-1">Los partidos aparecen aquí cuando ya han iniciado.</p>
+          <div className="text-center py-20 text-slate-600">
+            <span className="text-5xl block mb-4">⏳</span>
+            <p className="font-medium">Aún no hay partidos cerrados.</p>
+            <p className="text-sm mt-1 text-slate-700">Los partidos aparecen aquí cuando ya han iniciado.</p>
           </div>
         )}
 
@@ -106,107 +109,93 @@ export default async function MisResultadosPage() {
           {cerrados.map(({ partido, pronostico, resultado, tieneResultado, sinPronostico, points, label, enVivo }) => {
             const fecha = new Date(partido.fechaUTC);
             const fechaStr = fecha.toLocaleDateString("es", {
-              weekday: "short",
-              day: "numeric",
-              month: "short",
+              weekday: "short", day: "numeric", month: "short",
               timeZone: "America/Guayaquil",
             });
             const horaStr = fecha.toLocaleTimeString("es", {
-              hour: "2-digit",
-              minute: "2-digit",
+              hour: "2-digit", minute: "2-digit",
               timeZone: "America/Guayaquil",
             });
 
-            const ptsColor =
-              points === null
-                ? ""
-                : points === 5
-                ? "text-green-400"
-                : points >= 2
-                ? "text-orange-400"
-                : "text-red-400";
+            const ptsBadge =
+              points === null ? null
+              : points === 5 ? { color: "text-emerald-400", bg: "bg-emerald-500/10 border-emerald-500/20" }
+              : points === 3 ? { color: "text-blue-400",    bg: "bg-blue-500/10 border-blue-500/20" }
+              : points === 2 ? { color: "text-amber-400",   bg: "bg-amber-500/10 border-amber-500/20" }
+              :                { color: "text-red-400",      bg: "bg-red-500/10 border-red-500/20" };
 
             const realBg =
-              points === null
-                ? ""
-                : points === 5
-                ? "bg-green-500/20 text-green-400 border border-green-500/30"
-                : points >= 2
-                ? "bg-orange-500/20 text-orange-400 border border-orange-500/30"
-                : "bg-red-500/20 text-red-400 border border-red-500/30";
+              points === null ? "bg-white/5 border-white/10 text-slate-300"
+              : points === 5 ? "bg-emerald-500/10 border-emerald-500/20 text-emerald-400"
+              : points >= 2  ? "bg-amber-500/10 border-amber-500/20 text-amber-400"
+              :                "bg-red-500/10 border-red-500/20 text-red-400";
 
             return (
-              <div
-                key={partido.id}
-                className="bg-[#1e293b] rounded-xl border border-slate-700/50 p-4"
-              >
-                {/* Header row */}
-                <div className="flex items-start justify-between mb-3">
+              <div key={partido.id} className="relative group bg-white/[0.03] border border-white/[0.07] rounded-2xl p-4 overflow-hidden">
+                {enVivo && (
+                  <div className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-red-500/50 to-transparent" />
+                )}
+
+                {/* Header */}
+                <div className="flex items-start justify-between mb-4">
                   <div>
-                    <p className="text-xs text-slate-500">
-                      Grupo {partido.grupo} · {partido.estadio}
-                    </p>
-                    <p className="text-xs text-slate-500">
-                      {fechaStr} · {horaStr}
-                    </p>
+                    <p className="text-xs text-slate-600">Grupo {partido.grupo} · {partido.estadio}</p>
+                    <p className="text-xs text-slate-600 mt-0.5">{fechaStr} · {horaStr}</p>
                   </div>
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0 ml-2">
                     {enVivo && (
-                      <span className="flex items-center gap-1 text-xs font-bold text-red-400 animate-pulse">
-                        🔴 EN VIVO
+                      <span className="flex items-center gap-1.5 text-xs font-bold text-red-400">
+                        <span className="w-1.5 h-1.5 rounded-full bg-red-500 animate-pulse inline-block" />
+                        EN VIVO
                       </span>
                     )}
-                    {tieneResultado && points !== null ? (
-                      <span className={`text-sm font-bold ${ptsColor}`}>
-                        {points > 0 ? "+" : ""}{points} pts{label ? ` · ${label}` : ""}
+                    {tieneResultado && ptsBadge && (
+                      <span className={`text-xs font-semibold px-2.5 py-1 rounded-full border ${ptsBadge.color} ${ptsBadge.bg}`}>
+                        {points! > 0 ? "+" : ""}{points} pts{label ? ` · ${label}` : ""}
                       </span>
-                    ) : (
-                      <span className="text-xs text-slate-500 italic">
-                        Esperando resultado…
-                      </span>
+                    )}
+                    {!tieneResultado && !sinPronostico && (
+                      <span className="text-xs text-slate-600 italic">Esperando resultado…</span>
+                    )}
+                    {sinPronostico && (
+                      <span className="text-xs text-slate-700 italic">Sin pronóstico</span>
                     )}
                   </div>
                 </div>
 
                 {/* Teams + scores */}
                 <div className="flex items-center gap-3">
-                  {/* Local */}
-                  <div className="flex-1 text-center">
+                  <div className="flex-1 text-center min-w-0">
                     <div className="text-3xl mb-1">{partido.flagLocal}</div>
-                    <div className="text-sm font-medium text-slate-200 leading-tight">
-                      {partido.equipoLocal}
-                    </div>
+                    <div className="text-xs font-semibold text-slate-400 leading-tight truncate">{partido.equipoLocal}</div>
                   </div>
 
-                  {/* Scores */}
-                  <div className="flex items-center gap-2">
+                  <div className="flex items-center gap-2 shrink-0">
                     {/* Pick */}
                     <div className="text-center">
-                      <div className="text-xs text-slate-500 mb-1">PICK</div>
-                      <div className={`rounded-lg px-3 py-1.5 font-bold text-lg min-w-[3rem] ${sinPronostico ? "bg-slate-700/50 text-slate-500" : "bg-slate-800 text-white"}`}>
+                      <div className="text-[10px] text-slate-700 uppercase tracking-widest mb-1.5">Pick</div>
+                      <div className={`rounded-xl px-3 py-1.5 font-bold text-base border ${sinPronostico ? "bg-white/[0.02] border-white/5 text-slate-600" : "bg-white/5 border-white/10 text-white"}`}>
                         {sinPronostico ? "–" : `${pronostico!.golesLocal}–${pronostico!.golesVisitante}`}
                       </div>
                     </div>
 
-                    {/* Real */}
                     {tieneResultado && resultado && (
-                      <div className="text-center">
-                        <div className="text-xs text-slate-500 mb-1">REAL</div>
-                        <div
-                          className={`rounded-lg px-3 py-1.5 font-bold text-lg min-w-[3rem] ${realBg}`}
-                        >
-                          {resultado.golesLocal}–{resultado.golesVisitante}
+                      <>
+                        <div className="text-slate-700 text-sm">vs</div>
+                        {/* Real */}
+                        <div className="text-center">
+                          <div className="text-[10px] text-slate-700 uppercase tracking-widest mb-1.5">Real</div>
+                          <div className={`rounded-xl px-3 py-1.5 font-bold text-base border ${realBg}`}>
+                            {resultado.golesLocal}–{resultado.golesVisitante}
+                          </div>
                         </div>
-                      </div>
+                      </>
                     )}
                   </div>
 
-                  {/* Visitante */}
-                  <div className="flex-1 text-center">
+                  <div className="flex-1 text-center min-w-0">
                     <div className="text-3xl mb-1">{partido.flagVisitante}</div>
-                    <div className="text-sm font-medium text-slate-200 leading-tight">
-                      {partido.equipoVisitante}
-                    </div>
+                    <div className="text-xs font-semibold text-slate-400 leading-tight truncate">{partido.equipoVisitante}</div>
                   </div>
                 </div>
               </div>
