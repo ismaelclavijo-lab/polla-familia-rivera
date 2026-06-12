@@ -171,7 +171,7 @@ export default function AdminPage() {
             const est = estados[partido.id];
             if (!est) return null;
             const fecha = new Date(partido.fechaUTC).toLocaleDateString("es", {
-              weekday: "short", day: "numeric", month: "short",
+              weekday: "short", day: "numeric", month: "short", timeZone: "America/Guayaquil",
             });
 
             return (

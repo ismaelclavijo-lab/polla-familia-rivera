@@ -109,10 +109,12 @@ export default async function MisResultadosPage() {
               weekday: "short",
               day: "numeric",
               month: "short",
+              timeZone: "America/Guayaquil",
             });
             const horaStr = fecha.toLocaleTimeString("es", {
               hour: "2-digit",
               minute: "2-digit",
+              timeZone: "America/Guayaquil",
             });
 
             const ptsColor =
