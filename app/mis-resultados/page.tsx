@@ -3,6 +3,7 @@ import { getSession } from "@/lib/auth";
 import { getPronosticos, getResultados } from "@/lib/db";
 import { PARTIDOS } from "@/lib/partidos-data";
 import { calcularPuntos } from "@/lib/scoring";
+import { syncFromESPN } from "@/lib/espn-sync";
 import Navbar from "@/components/Navbar";
 import AutoRefresh from "@/components/AutoRefresh";
 
@@ -11,6 +12,9 @@ export const dynamic = "force-dynamic";
 export default async function MisResultadosPage() {
   const session = await getSession();
   if (!session) redirect("/auth/login");
+
+  // Sync live/finished matches from ESPN before fetching results
+  await syncFromESPN();
 
   const [pronosticos, resultados] = await Promise.all([
     getPronosticos(session.email),

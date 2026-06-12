@@ -1,7 +1,6 @@
 "use client";
 
 import { useState, useEffect } from "react";
-import { useRouter } from "next/navigation";
 import { PARTIDOS } from "@/lib/partidos-data";
 import Link from "next/link";
 
@@ -15,11 +14,52 @@ interface ResultadoState {
 }
 
 export default function AdminPage() {
-  const router = useRouter();
   const ahora = new Date();
 
   // Only show started matches
   const startedPartidos = PARTIDOS.filter((p) => new Date(p.fechaUTC) <= ahora);
+
+  const [syncing, setSyncing] = useState(false);
+  const [syncResult, setSyncResult] = useState<string | null>(null);
+
+  async function sincronizarESPN() {
+    setSyncing(true);
+    setSyncResult(null);
+    try {
+      const res = await fetch("/api/admin/sync-espn", { method: "POST" });
+      const data = await res.json();
+      if (res.ok) {
+        setSyncResult(`✓ ${data.synced} partido(s) sincronizados`);
+        // Reload resultados from DB
+        fetch("/api/resultados")
+          .then((r) => r.json())
+          .then((d) => {
+            if (!d.resultados) return;
+            setEstados((prev) => {
+              const next = { ...prev };
+              for (const r of d.resultados) {
+                if (next[r.partidoId]) {
+                  next[r.partidoId] = {
+                    ...next[r.partidoId],
+                    local: r.golesLocal !== null ? String(r.golesLocal) : "",
+                    visitante: r.golesVisitante !== null ? String(r.golesVisitante) : "",
+                    cerrado: r.cerrado ?? false,
+                  };
+                }
+              }
+              return next;
+            });
+          });
+      } else {
+        setSyncResult(`Error: ${data.error}`);
+      }
+    } catch {
+      setSyncResult("Error de conexión");
+    } finally {
+      setSyncing(false);
+      setTimeout(() => setSyncResult(null), 5000);
+    }
+  }
 
   const [estados, setEstados] = useState<Record<string, ResultadoState>>(() => {
     const init: Record<string, ResultadoState> = {};
@@ -97,9 +137,27 @@ export default function AdminPage() {
       </header>
 
       <main className="max-w-3xl mx-auto px-4 py-8">
-        <h1 className="text-xl font-bold mb-1">Ingresar resultados</h1>
+        <div className="flex items-center justify-between mb-1">
+          <h1 className="text-xl font-bold">Ingresar resultados</h1>
+          <div className="flex items-center gap-3">
+            {syncResult && (
+              <span className={`text-sm ${syncResult.startsWith("✓") ? "text-green-400" : "text-red-400"}`}>
+                {syncResult}
+              </span>
+            )}
+            <button
+              onClick={sincronizarESPN}
+              disabled={syncing}
+              className="flex items-center gap-2 px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white text-sm font-semibold rounded-lg transition-colors"
+            >
+              {syncing ? "⏳ Sincronizando…" : "🔄 Sincronizar ESPN"}
+            </button>
+          </div>
+        </div>
         <p className="text-slate-400 text-sm mb-6">
           Ingresa el marcador final de cada partido. Marca "Finalizado" cuando el partido terminó.
+          <br />
+          <span className="text-blue-400">Usa "Sincronizar ESPN" para jalar resultados automáticamente.</span>
         </p>
 
         {startedPartidos.length === 0 && (
