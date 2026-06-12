@@ -18,38 +18,40 @@ export default async function MisResultadosPage() {
   ]);
 
   const resultadoMap = new Map(resultados.map((r) => [r.partidoId, r]));
+  const pronosticoMap = new Map(pronosticos.map((p) => [p.partidoId, p]));
   const ahora = new Date();
 
-  // Closed matches = match time has passed and user made a prediction
-  const cerrados = pronosticos
-    .map((p) => {
-      const partido = PARTIDOS.find((pa) => pa.id === p.partidoId);
-      if (!partido) return null;
-      const fechaPartido = new Date(partido.fechaUTC);
-      if (ahora < fechaPartido) return null; // not started yet
+  // All started matches (whether or not the user predicted them)
+  const cerrados = PARTIDOS
+    .filter((partido) => new Date(partido.fechaUTC) <= ahora)
+    .map((partido) => {
+      const pronostico = pronosticoMap.get(partido.id) ?? null;
+      const resultado = resultadoMap.get(partido.id) ?? null;
 
-      const resultado = resultadoMap.get(p.partidoId) ?? null;
       const tieneResultado =
         resultado !== null &&
         resultado.golesLocal !== null &&
         resultado.golesVisitante !== null;
 
-      const { points, label } = tieneResultado
-        ? calcularPuntos(
-            p.golesLocal,
-            p.golesVisitante,
-            resultado!.golesLocal as number,
-            resultado!.golesVisitante as number
-          )
-        : { points: null as number | null, label: null as string | null };
+      const sinPronostico = pronostico === null;
+
+      const { points, label } =
+        !sinPronostico && tieneResultado
+          ? calcularPuntos(
+              pronostico!.golesLocal,
+              pronostico!.golesVisitante,
+              resultado!.golesLocal as number,
+              resultado!.golesVisitante as number
+            )
+          : { points: sinPronostico ? 0 : (null as number | null), label: sinPronostico ? "Sin pronóstico" : (null as string | null) };
 
       // En vivo: started within last 115 min and not yet cerrado
-      const finEstimado = new Date(new Date(partido.fechaUTC).getTime() + 115 * 60 * 1000);
+      const fechaPartido = new Date(partido.fechaUTC);
+      const finEstimado = new Date(fechaPartido.getTime() + 115 * 60 * 1000);
       const enVivo = ahora >= fechaPartido && ahora <= finEstimado && !resultado?.cerrado;
 
-      return { partido, pronostico: p, resultado, tieneResultado, points, label, enVivo };
+      return { partido, pronostico, resultado, tieneResultado, sinPronostico, points, label, enVivo };
     })
-    .filter((x): x is NonNullable<typeof x> => x !== null)
     .sort(
       (a, b) =>
         new Date(a.partido.fechaUTC).getTime() -
@@ -57,8 +59,9 @@ export default async function MisResultadosPage() {
     );
 
   const hayEnVivo = cerrados.some((c) => c.enVivo);
+  const conPronostico = cerrados.filter((c) => !c.sinPronostico);
   const yaJugados = cerrados.filter((c) => c.tieneResultado);
-  const totalPuntos = yaJugados.reduce((sum, c) => sum + (c.points ?? 0), 0);
+  const totalPuntos = conPronostico.reduce((sum, c) => sum + (c.points ?? 0), 0);
 
   return (
     <div className="min-h-screen bg-[#0f172a] text-white">
@@ -74,7 +77,7 @@ export default async function MisResultadosPage() {
         {/* Stats */}
         <div className="grid grid-cols-3 gap-3 mb-8">
           <div className="bg-[#1e293b] rounded-xl p-4 text-center border border-slate-700/50">
-            <div className="text-2xl font-bold text-orange-400">{cerrados.length}</div>
+            <div className="text-2xl font-bold text-orange-400">{conPronostico.length}</div>
             <div className="text-xs text-slate-400 mt-1">Picks cerrados</div>
           </div>
           <div className="bg-[#1e293b] rounded-xl p-4 text-center border border-slate-700/50">
@@ -96,7 +99,7 @@ export default async function MisResultadosPage() {
         )}
 
         <div className="space-y-3">
-          {cerrados.map(({ partido, pronostico, resultado, tieneResultado, points, label, enVivo }) => {
+          {cerrados.map(({ partido, pronostico, resultado, tieneResultado, sinPronostico, points, label, enVivo }) => {
             const fecha = new Date(partido.fechaUTC);
             const fechaStr = fecha.toLocaleDateString("es", {
               weekday: "short",
@@ -174,8 +177,8 @@ export default async function MisResultadosPage() {
                     {/* Pick */}
                     <div className="text-center">
                       <div className="text-xs text-slate-500 mb-1">PICK</div>
-                      <div className="bg-slate-800 rounded-lg px-3 py-1.5 font-bold text-white text-lg min-w-[3rem]">
-                        {pronostico.golesLocal}–{pronostico.golesVisitante}
+                      <div className={`rounded-lg px-3 py-1.5 font-bold text-lg min-w-[3rem] ${sinPronostico ? "bg-slate-700/50 text-slate-500" : "bg-slate-800 text-white"}`}>
+                        {sinPronostico ? "–" : `${pronostico!.golesLocal}–${pronostico!.golesVisitante}`}
                       </div>
                     </div>
 
