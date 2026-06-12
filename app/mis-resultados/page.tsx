@@ -5,7 +5,7 @@ import { PARTIDOS } from "@/lib/partidos-data";
 import { calcularPuntos } from "@/lib/scoring";
 import { syncFromESPN } from "@/lib/espn-sync";
 import Navbar from "@/components/Navbar";
-import AutoRefresh from "@/components/AutoRefresh";
+import ResultsWatcher from "@/components/ResultsWatcher";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +70,7 @@ export default async function MisResultadosPage() {
   return (
     <div className="min-h-screen bg-slate-950 text-white">
       <Navbar nombre={session.nombre} />
-      <AutoRefresh intervalMs={hayEnVivo ? 30_000 : 60_000} />
+      <ResultsWatcher intervalMs={hayEnVivo ? 30_000 : 60_000} />
 
       <main className="max-w-3xl mx-auto px-4 py-8">
 

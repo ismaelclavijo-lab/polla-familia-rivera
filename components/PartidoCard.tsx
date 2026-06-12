@@ -3,6 +3,24 @@
 import { useState, useEffect, useRef, useCallback } from "react";
 import { Partido } from "@/lib/partidos-data";
 
+function useCountdown(fechaUTC: string) {
+  const [countdown, setCountdown] = useState<string | null>(null);
+  useEffect(() => {
+    function calc() {
+      const diff = new Date(fechaUTC).getTime() - Date.now();
+      if (diff <= 0 || diff > 24 * 60 * 60 * 1000) { setCountdown(null); return; }
+      const h = Math.floor(diff / 3_600_000);
+      const m = Math.floor((diff % 3_600_000) / 60_000);
+      const s = Math.floor((diff % 60_000) / 1000);
+      setCountdown(h > 0 ? `${h}h ${m}m` : m > 0 ? `${m}m ${s}s` : `${s}s`);
+    }
+    calc();
+    const id = setInterval(calc, 1000);
+    return () => clearInterval(id);
+  }, [fechaUTC]);
+  return countdown;
+}
+
 interface Pronostico {
   golesLocal: number;
   golesVisitante: number;
@@ -28,6 +46,7 @@ const LABEL_MAP: Record<string, { text: string; color: string; bg: string }> = {
 };
 
 export default function PartidoCard({ partido, pronostico: initialPronostico }: Props) {
+  const countdown = useCountdown(partido.fechaUTC);
   const [localScore, setLocalScore] = useState<string>(
     initialPronostico !== undefined ? String(initialPronostico.golesLocal) : ""
   );
@@ -94,7 +113,11 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
         {/* Header */}
         <div className="flex items-center justify-between mb-4 text-xs">
           <span className="bg-white/5 text-slate-500 px-2 py-0.5 rounded-full">Grupo {partido.grupo}</span>
-          <span className="text-slate-600">{fechaDisplay}</span>
+          {countdown ? (
+            <span className="text-amber-400 font-semibold text-xs animate-pulse">⏱ faltan {countdown}</span>
+          ) : (
+            <span className="text-slate-600">{fechaDisplay}</span>
+          )}
         </div>
 
         {/* Teams + Score */}
