@@ -2,6 +2,7 @@ import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
 import { getPronosticos, getResultados } from "@/lib/db";
 import { PARTIDOS, getCurrentWeekRange } from "@/lib/partidos-data";
+import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PartidoCard from "@/components/PartidoCard";
 
@@ -22,39 +23,35 @@ export default async function DashboardPage() {
   const ahora = new Date();
   const { start, end, label: weekLabel } = getCurrentWeekRange();
 
-  // Partidos esta semana
+  // Partidos esta semana que AÚN no han iniciado
   const weekPartidos = PARTIDOS.filter((p) => {
     const d = new Date(p.fechaUTC);
-    return d >= start && d <= end;
-  }).map((p) => {
-    const r = resultadoMap.get(p.id);
-    const fechaPartido = new Date(p.fechaUTC);
-    const cerradoPorTiempo = ahora >= fechaPartido;
-    return {
-      ...p,
-      golesLocal: r?.golesLocal ?? null,
-      golesVisitante: r?.golesVisitante ?? null,
-      cerrado: r?.cerrado ?? cerradoPorTiempo,
-      terminado: r !== undefined && r.golesLocal !== null && r.golesVisitante !== null,
-    };
-  });
+    return d >= start && d <= end && d > ahora;
+  }).map((p) => ({
+    ...p,
+    golesLocal: null,
+    golesVisitante: null,
+    cerrado: false,
+    terminado: false,
+  }));
+
+  // Cuántos partidos de esta semana ya iniciaron (para el banner)
+  const partidosSemanaIniciados = PARTIDOS.filter((p) => {
+    const d = new Date(p.fechaUTC);
+    return d >= start && d <= end && d <= ahora;
+  }).length;
 
   // Partidos pendientes (futuros, fuera de semana)
   const futurePartidos = PARTIDOS.filter((p) => {
     const d = new Date(p.fechaUTC);
-    return d > end;
-  }).slice(0, 8).map((p) => {
-    const r = resultadoMap.get(p.id);
-    const fechaPartido = new Date(p.fechaUTC);
-    const cerradoPorTiempo = ahora >= fechaPartido;
-    return {
-      ...p,
-      golesLocal: r?.golesLocal ?? null,
-      golesVisitante: r?.golesVisitante ?? null,
-      cerrado: r?.cerrado ?? cerradoPorTiempo,
-      terminado: r !== undefined && r.golesLocal !== null && r.golesVisitante !== null,
-    };
-  });
+    return d > end && d > ahora;
+  }).slice(0, 8).map((p) => ({
+    ...p,
+    golesLocal: null,
+    golesVisitante: null,
+    cerrado: false,
+    terminado: false,
+  }));
 
   const completados = weekPartidos.filter((p) => pronosticoMap.has(p.id)).length;
   const total = weekPartidos.length;
@@ -68,6 +65,19 @@ export default async function DashboardPage() {
         <p className="text-slate-400 text-sm mb-6">
           Registra tu marcador antes de que empiece cada partido.
         </p>
+
+        {/* Banner: hay partidos iniciados → ver en Mis resultados */}
+        {partidosSemanaIniciados > 0 && (
+          <Link href="/mis-resultados" className="flex items-center justify-between bg-orange-500/10 border border-orange-500/30 rounded-xl px-5 py-3 mb-6 hover:bg-orange-500/20 transition-colors">
+            <div>
+              <p className="text-sm font-medium text-orange-400">
+                🔴 {partidosSemanaIniciados} partido{partidosSemanaIniciados > 1 ? "s" : ""} en curso o terminado{partidosSemanaIniciados > 1 ? "s" : ""}
+              </p>
+              <p className="text-xs text-slate-400 mt-0.5">Seguí el marcador en Mis resultados →</p>
+            </div>
+            <span className="text-orange-400 text-lg">→</span>
+          </Link>
+        )}
 
         {/* Week progress card */}
         {weekPartidos.length > 0 && (
