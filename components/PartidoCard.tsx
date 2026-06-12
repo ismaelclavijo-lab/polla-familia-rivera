@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef, useCallback } from "react";
 import { Partido } from "@/lib/partidos-data";
 
 interface Pronostico {
@@ -46,6 +46,7 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
   const [saving, setSaving] = useState(false);
   const [savedAt, setSavedAt] = useState<string | null>(initialPronostico ? "Guardado" : null);
   const [error, setError] = useState<string | null>(null);
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   const cerrado = partido.cerrado;
 
@@ -67,29 +68,15 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
     resultLabel = label;
   }
 
-  async function handleSave() {
-    const gl = parseInt(localScore, 10);
-    const gv = parseInt(visitScore, 10);
-
-    if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) {
-      setError("Ingresa un marcador válido");
-      return;
-    }
-
+  const save = useCallback(async (gl: number, gv: number) => {
     setSaving(true);
     setError(null);
-
     try {
       const res = await fetch("/api/pronosticos", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          partidoId: partido.id,
-          golesLocal: gl,
-          golesVisitante: gv,
-        }),
+        body: JSON.stringify({ partidoId: partido.id, golesLocal: gl, golesVisitante: gv }),
       });
-
       if (res.ok) {
         setSavedAt("Guardado ✓");
         setTimeout(() => setSavedAt(null), 3000);
@@ -102,7 +89,24 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
     } finally {
       setSaving(false);
     }
-  }
+  }, [partido.id]);
+
+  // Auto-save with 800ms debounce whenever both scores are valid
+  useEffect(() => {
+    if (cerrado) return;
+    const gl = parseInt(localScore, 10);
+    const gv = parseInt(visitScore, 10);
+    if (isNaN(gl) || isNaN(gv) || gl < 0 || gv < 0) return;
+
+    if (debounceRef.current) clearTimeout(debounceRef.current);
+    debounceRef.current = setTimeout(() => {
+      save(gl, gv);
+    }, 800);
+
+    return () => {
+      if (debounceRef.current) clearTimeout(debounceRef.current);
+    };
+  }, [localScore, visitScore, cerrado, save]);
 
   const fechaDisplay = new Date(partido.fechaUTC).toLocaleString("es-EC", {
     weekday: "short",
@@ -132,7 +136,6 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
         {/* Score inputs / result */}
         <div className="flex items-center gap-2">
           {cerrado ? (
-            // Show actual result or locked prediction
             <div className="flex items-center gap-2">
               {partido.terminado ? (
                 <>
@@ -157,7 +160,6 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
               )}
             </div>
           ) : (
-            // Editable inputs
             <div className="flex items-center gap-2">
               <input
                 type="number"
@@ -203,14 +205,8 @@ export default function PartidoCard({ partido, pronostico: initialPronostico }: 
           {!cerrado && (
             <>
               {error && <span className="text-red-400">{error}</span>}
-              {savedAt && !error && <span className="text-green-400">{savedAt}</span>}
-              <button
-                onClick={handleSave}
-                disabled={saving || localScore === "" || visitScore === ""}
-                className="px-3 py-1 bg-orange-500 hover:bg-orange-600 disabled:opacity-50 text-white text-xs font-semibold rounded-lg transition-colors"
-              >
-                {saving ? "…" : "Guardar"}
-              </button>
+              {saving && <span className="text-slate-400 italic">Guardando…</span>}
+              {savedAt && !error && !saving && <span className="text-green-400">{savedAt}</span>}
             </>
           )}
         </div>

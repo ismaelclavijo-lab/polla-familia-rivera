@@ -11,6 +11,7 @@ export default function Navbar({ nombre }: { nombre: string }) {
 
   const navLinks = [
     { href: "/dashboard", label: "Pronosticar" },
+    { href: "/mis-resultados", label: "Mis resultados" },
     { href: "/ranking", label: "Ranking" },
     { href: "/reglas", label: "Cómo jugar" },
   ];
