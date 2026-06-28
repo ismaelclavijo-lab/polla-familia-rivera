@@ -59,6 +59,63 @@ export async function initDB(): Promise<void> {
       cerrado         BOOLEAN DEFAULT FALSE
     )
   `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS partidos_extra (
+      id              TEXT PRIMARY KEY,
+      fase            TEXT NOT NULL DEFAULT 'Eliminación Directa',
+      grupo           TEXT NOT NULL DEFAULT '',
+      jornada         INT  NOT NULL DEFAULT 0,
+      fecha_utc       TIMESTAMPTZ NOT NULL,
+      equipo_local    TEXT NOT NULL,
+      equipo_visitante TEXT NOT NULL,
+      estadio         TEXT NOT NULL DEFAULT '',
+      flag_local      TEXT NOT NULL DEFAULT '🏳',
+      flag_visitante  TEXT NOT NULL DEFAULT '🏳'
+    )
+  `);
+
+  await query(`
+    CREATE TABLE IF NOT EXISTS sync_meta (
+      key        TEXT PRIMARY KEY,
+      synced_at  TIMESTAMPTZ DEFAULT NOW()
+    )
+  `);
+}
+
+// ── Partidos extra (eliminación directa) ─────────────────────────
+
+export interface PartidoExtra {
+  id: string;
+  fase: string;
+  grupo: string;
+  jornada: number;
+  fechaUTC: string;
+  equipoLocal: string;
+  equipoVisitante: string;
+  estadio: string;
+  flagLocal: string;
+  flagVisitante: string;
+}
+
+export async function getPartidosExtra(): Promise<PartidoExtra[]> {
+  const rows = await query<{
+    id: string; fase: string; grupo: string; jornada: number;
+    fecha_utc: string; equipo_local: string; equipo_visitante: string;
+    estadio: string; flag_local: string; flag_visitante: string;
+  }>("SELECT * FROM partidos_extra ORDER BY fecha_utc");
+  return rows.map((r) => ({
+    id: r.id,
+    fase: r.fase,
+    grupo: r.grupo,
+    jornada: r.jornada,
+    fechaUTC: r.fecha_utc,
+    equipoLocal: r.equipo_local,
+    equipoVisitante: r.equipo_visitante,
+    estadio: r.estadio,
+    flagLocal: r.flag_local,
+    flagVisitante: r.flag_visitante,
+  }));
 }
 
 // ── Jugadores ────────────────────────────────────────────────────

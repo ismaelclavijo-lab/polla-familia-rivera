@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getPronosticos, getResultados } from "@/lib/db";
-import { PARTIDOS } from "@/lib/partidos-data";
+import { getPronosticos, getResultados, getPartidosExtra } from "@/lib/db";
+import { PARTIDOS, type Partido } from "@/lib/partidos-data";
 import { calcularPuntos } from "@/lib/scoring";
 import { syncFromESPN } from "@/lib/espn-sync";
 import Navbar from "@/components/Navbar";
@@ -16,17 +16,24 @@ export default async function MisResultadosPage() {
   // Sync live/finished matches from ESPN before fetching results
   await syncFromESPN();
 
-  const [pronosticos, resultados] = await Promise.all([
+  const [pronosticos, resultados, partidos_extra] = await Promise.all([
     getPronosticos(session.email),
     getResultados(),
+    getPartidosExtra(),
   ]);
+
+  // Combine group stage + knockout rounds
+  const TODOS: Partido[] = [
+    ...PARTIDOS,
+    ...partidos_extra.map((p) => ({ ...p, jornada: 0 })),
+  ];
 
   const resultadoMap = new Map(resultados.map((r) => [r.partidoId, r]));
   const pronosticoMap = new Map(pronosticos.map((p) => [p.partidoId, p]));
   const ahora = new Date();
 
   // All started matches (whether or not the user predicted them)
-  const cerrados = PARTIDOS
+  const cerrados = TODOS
     .filter((partido) => new Date(partido.fechaUTC) <= ahora)
     .map((partido) => {
       const pronostico = pronosticoMap.get(partido.id) ?? null;

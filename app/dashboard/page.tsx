@@ -1,7 +1,8 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getPronosticos, getResultados } from "@/lib/db";
-import { PARTIDOS, getCurrentWeekRange } from "@/lib/partidos-data";
+import { getPronosticos, getResultados, getPartidosExtra } from "@/lib/db";
+import { PARTIDOS, getCurrentWeekRange, type Partido } from "@/lib/partidos-data";
+import { syncScheduleFromESPN } from "@/lib/espn-sync";
 import Link from "next/link";
 import Navbar from "@/components/Navbar";
 import PartidoCard from "@/components/PartidoCard";
@@ -12,10 +13,20 @@ export default async function DashboardPage() {
   const session = await getSession();
   if (!session) redirect("/auth/login");
 
-  const [pronosticos, resultados] = await Promise.all([
+  // Sync knockout schedule in background (3h cooldown built in)
+  await syncScheduleFromESPN();
+
+  const [pronosticos, resultados, partidos_extra] = await Promise.all([
     getPronosticos(session.email),
     getResultados(),
+    getPartidosExtra(),
   ]);
+
+  // Combine group stage + knockout rounds
+  const TODOS: Partido[] = [
+    ...PARTIDOS,
+    ...partidos_extra.map((p) => ({ ...p, jornada: 0 })),
+  ];
 
   const pronosticoMap = new Map(pronosticos.map((p) => [p.partidoId, p]));
   const resultadoMap = new Map(resultados.map((r) => [r.partidoId, r]));
@@ -24,7 +35,7 @@ export default async function DashboardPage() {
   const { start, end, label: weekLabel } = getCurrentWeekRange();
 
   // Partidos esta semana que AÚN no han iniciado
-  const weekPartidos = PARTIDOS.filter((p) => {
+  const weekPartidos = TODOS.filter((p) => {
     const d = new Date(p.fechaUTC);
     return d >= start && d <= end && d > ahora;
   }).map((p) => ({
@@ -36,13 +47,13 @@ export default async function DashboardPage() {
   }));
 
   // Cuántos partidos de esta semana ya iniciaron (para el banner)
-  const partidosSemanaIniciados = PARTIDOS.filter((p) => {
+  const partidosSemanaIniciados = TODOS.filter((p) => {
     const d = new Date(p.fechaUTC);
     return d >= start && d <= end && d <= ahora;
   }).length;
 
   // Partidos pendientes (futuros, fuera de semana)
-  const futurePartidos = PARTIDOS.filter((p) => {
+  const futurePartidos = TODOS.filter((p) => {
     const d = new Date(p.fechaUTC);
     return d > end && d > ahora;
   }).slice(0, 8).map((p) => ({

@@ -1,6 +1,6 @@
 import { redirect } from "next/navigation";
 import { getSession } from "@/lib/auth";
-import { getJugadores, getPronosticos, getResultados } from "@/lib/db";
+import { getJugadores, getPronosticos, getResultados, getPartidosExtra } from "@/lib/db";
 import { calcularPuntos } from "@/lib/scoring";
 import { PARTIDOS } from "@/lib/partidos-data";
 import Navbar from "@/components/Navbar";
@@ -12,14 +12,16 @@ export default async function RankingPage() {
   const session = await getSession();
   if (!session) redirect("/auth/login");
 
-  const [jugadores, pronosticos, resultados] = await Promise.all([
+  const [jugadores, pronosticos, resultados, partidos_extra] = await Promise.all([
     getJugadores(),
     getPronosticos(),
     getResultados(),
+    getPartidosExtra(),
   ]);
 
   const resultadoMap = new Map(resultados.map((r) => [r.partidoId, r]));
-  const partidoMap = new Map(PARTIDOS.map((p) => [p.id, p]));
+  const TODOS = [...PARTIDOS, ...partidos_extra.map((p) => ({ ...p, jornada: 0 }))];
+  const partidoMap = new Map(TODOS.map((p) => [p.id, p]));
 
   // Build per-player data
   const playerMap = new Map<string, {
