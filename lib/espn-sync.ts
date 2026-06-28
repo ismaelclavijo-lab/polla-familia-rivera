@@ -37,6 +37,24 @@ function parseFase(event: Record<string, unknown>): string {
  * Only processes matches NOT already in hardcoded PARTIDOS.
  */
 export async function syncScheduleFromESPN(): Promise<number> {
+  // Ensure tables exist
+  try {
+    await query(`
+      CREATE TABLE IF NOT EXISTS partidos_extra (
+        id TEXT PRIMARY KEY, fase TEXT NOT NULL DEFAULT 'Eliminación Directa',
+        grupo TEXT NOT NULL DEFAULT '', jornada INT NOT NULL DEFAULT 0,
+        fecha_utc TIMESTAMPTZ NOT NULL, equipo_local TEXT NOT NULL,
+        equipo_visitante TEXT NOT NULL, estadio TEXT NOT NULL DEFAULT '',
+        flag_local TEXT NOT NULL DEFAULT '🏳', flag_visitante TEXT NOT NULL DEFAULT '🏳'
+      )
+    `);
+    await query(`
+      CREATE TABLE IF NOT EXISTS sync_meta (
+        key TEXT PRIMARY KEY, synced_at TIMESTAMPTZ DEFAULT NOW()
+      )
+    `);
+  } catch { /* ignore */ }
+
   // Cooldown: skip if synced recently
   try {
     const meta = await query<{ synced_at: string }>(
@@ -46,7 +64,7 @@ export async function syncScheduleFromESPN(): Promise<number> {
       const diff = Date.now() - new Date(meta[0].synced_at).getTime();
       if (diff < 3 * 60 * 60 * 1000) return 0; // less than 3h ago
     }
-  } catch { /* table may not exist yet */ }
+  } catch { /* ignore */ }
 
   // Fetch next 20 days from ESPN
   const dates: string[] = [];
