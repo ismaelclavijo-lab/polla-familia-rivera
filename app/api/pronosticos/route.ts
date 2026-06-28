@@ -1,6 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSession } from "@/lib/auth";
-import { getPronosticos, upsertPronostico, getResultadoByPartidoId } from "@/lib/db";
+import { getPronosticos, upsertPronostico, getResultadoByPartidoId, query } from "@/lib/db";
 import { getPartidoById } from "@/lib/partidos-data";
 
 export async function GET() {
@@ -29,22 +29,30 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: "Marcador inválido" }, { status: 400 });
   }
 
-  const partido = getPartidoById(partidoId);
-  if (!partido) {
+  // Look up partido in hardcoded list OR partidos_extra DB
+  let fechaUTC: string | null = null;
+  const hardcoded = getPartidoById(partidoId);
+  if (hardcoded) {
+    fechaUTC = hardcoded.fechaUTC;
+  } else {
+    const rows = await query<{ fecha_utc: string }>(
+      "SELECT fecha_utc FROM partidos_extra WHERE id = $1", [partidoId]
+    );
+    if (rows[0]) fechaUTC = rows[0].fecha_utc;
+  }
+
+  if (!fechaUTC) {
     return NextResponse.json({ error: "Partido no encontrado" }, { status: 404 });
   }
 
-  // Check if match is locked (started or explicitly closed)
+  // Check if match is locked (started)
   const ahora = new Date();
-  const fechaPartido = new Date(partido.fechaUTC);
+  const fechaPartido = new Date(fechaUTC);
   if (ahora >= fechaPartido) {
-    const resultado = await getResultadoByPartidoId(partidoId);
-    if (resultado?.cerrado || ahora >= fechaPartido) {
-      return NextResponse.json(
-        { error: "El partido ya comenzó, no puedes modificar tu pronóstico" },
-        { status: 403 }
-      );
-    }
+    return NextResponse.json(
+      { error: "El partido ya comenzó, no puedes modificar tu pronóstico" },
+      { status: 403 }
+    );
   }
 
   await upsertPronostico(session.email, partidoId, golesLocal, golesVisitante);
