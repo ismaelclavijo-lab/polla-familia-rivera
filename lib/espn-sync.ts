@@ -14,7 +14,7 @@ const FLAG_MAP: Record<string, string> = {
   COL: "🇨🇴", NGR: "🇳🇬", NGA: "🇳🇬", SWZ: "🇸🇿", VEN: "🇻🇪", CHI: "🇨🇱",
   PER: "🇵🇪", BOL: "🇧🇴", CRC: "🇨🇷", HON: "🇭🇳", GTM: "🇬🇹", JAM: "🇯🇲",
   TRI: "🇹🇹", BAH: "🇧🇸", POL: "🇵🇱", SRB: "🇷🇸", SVK: "🇸🇰", ROU: "🇷🇴",
-  HUN: "🇭🇺", GRE: "🇬🇷", DEN: "🇩🇰", FIN: "🇫🇮", NOR: "🇳🇴", WAL: "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
+  HUN: "🇭🇺", GRE: "🇬🇷", DEN: "🇩🇰", FIN: "🇫🇮", WAL: "🏴󠁧󠁢󠁷󠁬󠁳󠁿",
   IRL: "🇮🇪", MLI: "🇲🇱", CMR: "🇨🇲", TAN: "🇹🇿", MOZ: "🇲🇿", ZIM: "🇿🇼",
   SAF: "🇿🇦", KEN: "🇰🇪", IND: "🇮🇳", THA: "🇹🇭", VIE: "🇻🇳", IDN: "🇮🇩",
   PHI: "🇵🇭", CHN: "🇨🇳", OMA: "🇴🇲", UAE: "🇦🇪", BHR: "🇧🇭", KWT: "🇰🇼",
